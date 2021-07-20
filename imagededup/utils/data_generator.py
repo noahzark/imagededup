@@ -1,3 +1,4 @@
+import os.path
 from pathlib import PurePath
 from typing import Tuple, List, Callable
 
@@ -30,18 +31,29 @@ class DataGenerator(Sequence):
         self.batch_size = batch_size
         self.basenet_preprocess = basenet_preprocess
         self.target_size = target_size
+        self.recursive = True
 
         self._get_image_files()
         self.indexes = np.arange(len(self.image_files))
         self.valid_image_files = self.image_files
 
     def _get_image_files(self) -> None:
-        self.image_files = sorted(
-            [
-                i.absolute()
-                for i in self.image_dir.glob('*')
-                if not i.name.startswith('.')]
-        )  # ignore hidden files
+        if self.recursive:
+            self.image_files = []
+            for i in self.image_dir.glob('*'):
+                if i.is_dir():
+                    for j in i.glob('*'):
+                        if not j.name.startswith('.') and not j.is_dir():
+                            self.image_files.append(j.absolute())
+                elif not i.name.startswith('.'):
+                    self.image_files.append(i.absolute())
+        else:
+            self.image_files = sorted(
+                [
+                    i.absolute()
+                    for i in self.image_dir.glob('*')
+                    if not i.name.startswith('.')]
+            )  # ignore hidden files
 
     def __len__(self) -> int:
         """Number of batches in the Sequence."""
